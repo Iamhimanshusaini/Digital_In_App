@@ -1,7 +1,8 @@
 const express = require('express')
 const teamModel = require('../model_and_schema/TeamModel');
-const transporter = require('../config/nodemailerConfig');
-const { default: nodemailer } = require('nodemailer');
+const { Resend } = require('../config/nodemailerConfig');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 const fs = require("fs");
 const path = require("path");
 
@@ -95,7 +96,6 @@ const path = require("path");
 // };
 const addTeamMember = async (req, res) => {
     try {
-
         const memberData = req.body;
 
         // =========================
@@ -112,7 +112,6 @@ const addTeamMember = async (req, res) => {
             });
         }
 
-
         // =========================
         // DUPLICATE EMAIL
         // =========================
@@ -128,13 +127,11 @@ const addTeamMember = async (req, res) => {
             });
         }
 
-
         // =========================
         // DUPLICATE PHONE
         // =========================
 
         if (memberData.phone) {
-
             const phoneExists = await teamModel.findOne({
                 phone: memberData.phone
             });
@@ -147,7 +144,6 @@ const addTeamMember = async (req, res) => {
             }
         }
 
-
         // =========================
         // CLOUDINARY IMAGE
         // =========================
@@ -155,7 +151,6 @@ const addTeamMember = async (req, res) => {
         if (req.file) {
             memberData.image = req.file.path;
         }
-
 
         // =========================
         // READ HTML TEMPLATE
@@ -170,7 +165,6 @@ const addTeamMember = async (req, res) => {
             ),
             "utf8"
         );
-
 
         // =========================
         // REPLACE TEMPLATE VALUES
@@ -215,7 +209,6 @@ const addTeamMember = async (req, res) => {
                 ).toLocaleDateString("en-IN")
             );
 
-
         // =========================
         // CREATE AND SAVE MEMBER
         // =========================
@@ -223,28 +216,33 @@ const addTeamMember = async (req, res) => {
         const saveMember =
             await teamModel.create(memberData);
 
-
         // =========================
-        // SEND WELCOME EMAIL
+        // SEND WELCOME EMAIL USING RESEND
         // =========================
 
-        const newmail =
-            await transporter.sendMail({
+        const { data, error } = await resend.emails.send({
+            from: `"Digital In App™" <${process.env.EMAIL_FROM}>`,
 
-                from:
-                    `"Digital In App™" <${process.env.EMAILID}>`,
+            to: [memberData.email],
 
-                to: memberData.email,
+            subject: "🎉 Welcome to Digital In App™",
 
-                subject:
-                    "🎉 Welcome to Digital In App™",
+            html: finalHtml
+        });
 
-                html: finalHtml
+        if (error) {
+            console.error("Resend email error:", error);
+
+            // Member is already saved in the database.
+            return res.status(201).json({
+                success: true,
+                message: "Member added successfully, but welcome email could not be sent",
+                saveMember,
+                emailSent: false
             });
+        }
 
-
-        console.log(newmail);
-
+        console.log("Welcome email sent:", data);
 
         // =========================
         // RESPONSE
@@ -253,12 +251,11 @@ const addTeamMember = async (req, res) => {
         return res.status(201).json({
             success: true,
             message: "Member added successfully",
-            saveMember
+            saveMember,
+            emailSent: true
         });
 
-
     } catch (error) {
-
         console.log(error);
 
         return res.status(500).json({
