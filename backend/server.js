@@ -1,6 +1,8 @@
 const express = require('express')
 const dotenv = require("dotenv");
 dotenv.config();
+const himanshudB = require('./config/dbConfig')
+
 const contactFormRoute = require("./routes/contactFormRoute")
 const blogRoute = require('./routes/blogRoute')
 const projectRoute = require('./routes/projectRoute')
@@ -11,7 +13,6 @@ const dashboardRoute = require('./routes/dashboardRoute')
 
 const mongoose = require('mongoose')
 const app = express();
-const himanshudB = require('./config/dbConfig')
 const transporter = require('./config/nodemailerConfig')
 const cors = require('cors')
 
