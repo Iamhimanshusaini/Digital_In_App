@@ -1,8 +1,7 @@
 const express = require('express')
 const teamModel = require('../model_and_schema/TeamModel');
-const { Resend } = require("resend");
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = require('../config/nodemailerConfig');
+const { default: nodemailer } = require('nodemailer');
 const fs = require("fs");
 const path = require("path");
 
@@ -96,6 +95,7 @@ const path = require("path");
 // };
 const addTeamMember = async (req, res) => {
     try {
+
         const memberData = req.body;
 
         // =========================
@@ -112,6 +112,7 @@ const addTeamMember = async (req, res) => {
             });
         }
 
+
         // =========================
         // DUPLICATE EMAIL
         // =========================
@@ -127,11 +128,13 @@ const addTeamMember = async (req, res) => {
             });
         }
 
+
         // =========================
         // DUPLICATE PHONE
         // =========================
 
         if (memberData.phone) {
+
             const phoneExists = await teamModel.findOne({
                 phone: memberData.phone
             });
@@ -144,6 +147,7 @@ const addTeamMember = async (req, res) => {
             }
         }
 
+
         // =========================
         // CLOUDINARY IMAGE
         // =========================
@@ -151,6 +155,7 @@ const addTeamMember = async (req, res) => {
         if (req.file) {
             memberData.image = req.file.path;
         }
+
 
         // =========================
         // READ HTML TEMPLATE
@@ -165,6 +170,7 @@ const addTeamMember = async (req, res) => {
             ),
             "utf8"
         );
+
 
         // =========================
         // REPLACE TEMPLATE VALUES
@@ -209,6 +215,7 @@ const addTeamMember = async (req, res) => {
                 ).toLocaleDateString("en-IN")
             );
 
+
         // =========================
         // CREATE AND SAVE MEMBER
         // =========================
@@ -216,33 +223,28 @@ const addTeamMember = async (req, res) => {
         const saveMember =
             await teamModel.create(memberData);
 
+
         // =========================
-        // SEND WELCOME EMAIL USING RESEND
+        // SEND WELCOME EMAIL
         // =========================
 
-        const { data, error } = await resend.emails.send({
-            from: `"Digital In App™" <${process.env.EMAIL_FROM}>`,
+        const newmail =
+            await transporter.sendMail({
 
-            to: [memberData.email],
+                from:
+                    `"Digital In App™" <${process.env.EMAILID}>`,
 
-            subject: "🎉 Welcome to Digital In App™",
+                to: memberData.email,
 
-            html: finalHtml
-        });
+                subject:
+                    "🎉 Welcome to Digital In App™",
 
-        if (error) {
-            console.error("Resend email error:", error);
-
-            // Member is already saved in the database.
-            return res.status(201).json({
-                success: true,
-                message: "Member added successfully, but welcome email could not be sent",
-                saveMember,
-                emailSent: false
+                html: finalHtml
             });
-        }
 
-        console.log("Welcome email sent:", data);
+
+        console.log(newmail);
+
 
         // =========================
         // RESPONSE
@@ -251,11 +253,12 @@ const addTeamMember = async (req, res) => {
         return res.status(201).json({
             success: true,
             message: "Member added successfully",
-            saveMember,
-            emailSent: true
+            saveMember
         });
 
+
     } catch (error) {
+
         console.log(error);
 
         return res.status(500).json({
@@ -266,6 +269,30 @@ const addTeamMember = async (req, res) => {
         });
     }
 };
+const getTeamMember = async (req, res) => {
+    try {
+        const allTeamMember = await teamModel.find().sort({ createdAt: -1 });
+        if (!allTeamMember) {
+            res.status(401).json({
+                message: 'record not found',
+                success: false
+            })
+        }
+        res.status(201).json({
+            message: 'finded.....',
+            allTeamMember,
+            success: true
+        })
+    } catch (error) {
+
+        res.status(401).json({
+            message: 'record not found',
+            success: false
+
+        })
+
+    }
+}
 const getTeamMember = async (req, res) => {
     try {
         const allTeamMember = await teamModel.find().sort({ createdAt: -1 });
