@@ -293,30 +293,8 @@ const getTeamMember = async (req, res) => {
 
     }
 }
-const getTeamMember = async (req, res) => {
-    try {
-        const allTeamMember = await teamModel.find().sort({ createdAt: -1 });
-        if (!allTeamMember) {
-            res.status(401).json({
-                message: 'record not found',
-                success: false
-            })
-        }
-        res.status(201).json({
-            message: 'finded.....',
-            allTeamMember,
-            success: true
-        })
-    } catch (error) {
 
-        res.status(401).json({
-            message: 'record not found',
-            success: false
 
-        })
-
-    }
-}
 const deleteTeamMember = async (req, res) => {
     const id = req.params.id
     try {
